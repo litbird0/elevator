@@ -123,11 +123,6 @@ class Elevator:
                     pass
             else:
                 pass
-        print('self.count:',self.count)
-        print('aim:',aim)
-        print('self.direction:',self.direction)
-        print('self.now:',self.now)
-        print('self.list_num:',self.list_num)
 
  #手动取消楼层按键函数
     def Cannel(self,aim):      
