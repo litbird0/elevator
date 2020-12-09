@@ -21,53 +21,38 @@ class Elevator:
         self.end = 0        #自动回停的条件：计时结束
         
 
- #拼接键盘输入的字符（数字）函数
-    def Add_weight(self,each_weight):
-        global self.weight
-        self.weight += each_weight
-
- #删除操作函数
-    def Del_weight(self):
-        global self.weight
-        weight = weight[:-1]
-
- #开门函数,sound:是否语音提示
-    def Open(self,sound):    
+ #开门函数,sound==1:开启语音提示
+    def Open(self,sound):
+        self.close = 0
         self.open = 1
+        print("开门")
         if sound:
-            Sound()
-        time.sleep(5)
+            self.Sound()
+        time.sleep(2)
 
-       #开始监听键盘
-        self.weight = ''
-        while True:
-            keyboard.add_hotkey('0',self.Add_weight,args=('0'))
-            keyboard.add_hotkey('1',self.Add_weight,args=('1'))
-            keyboard.add_hotkey('2',self.Add_weight,args=('2'))
-            keyboard.add_hotkey('3',self.Add_weight,args=('3'))
-            keyboard.add_hotkey('4',self.Add_weight,args=('4'))
-            keyboard.add_hotkey('5',self.Add_weight,args=('5'))
-            keyboard.add_hotkey('6',self.Add_weight,args=('6'))
-            keyboard.add_hotkey('7',self.Add_weight,args=('7'))
-            keyboard.add_hotkey('8',self.Add_weight,args=('8'))
-            keyboard.add_hotkey('9',self.Add_weight,args=('9'))
-            keyboard.add_hotkey(',',self.Add_weight,args=(','))
-            keyboard.add_hotkey('+',self.Add_weight,args=('+'))
-            keyboard.add_hotkey('-',self.Add_weight,args=('-'))
-            keyboard.add_hotkey('backspace',self.Del_weight)
-            recorded = keyboard.record(until='enter')    #按下回车键，停止监听
-            if recorded!=[]:
-                break
+       #输入重量的变化
+        self.weight = input('请输入重量的变化：')
         if self.weight!='':
             self.weight = self.weight.split(',')
             self.Heavy(self.weight)
         self.Close()
+        self.open = 0
 
  #关门函数   
-    def Close(self):     
-        self.close = 1
-        time.sleep(2)
-        self.Heavy()
+    def Close(self):
+        if self.close:
+            pass
+        else:
+            self.close = 1
+            print("关门")
+            time.sleep(2)
+
+ #开门和关门；只要按下关门键，就关门
+    def Open_or_Close(self):
+        if self.close==1:     
+            self.Close()
+        elif self.inopen==1 or (self.direction==0 and self.outdown==1) or (self.direction==1 and self.outup==1):
+            self.Open()
 
  #语音提示函数
     def Sound(self):   
@@ -99,30 +84,23 @@ class Elevator:
         self.Button(aim)
         self.outdown = 0   #自动取消按下
 
-
  #按键函数
     def Button(self,aim):    
-        
-        #开门和关门；只要按下关门键，就关门
-        if self.close==1:     
-            self.Close()
-        elif self.inopen==1 or (self.direction==0 and self.outdown==1) or (self.direction==1 and self.outup==1):
-            self.Open()
-        
         #原来停止，最先按下的楼层决定运行方向
         if self.direction==-1:
-            if self.count==1:
-                if aim==self.now:
-                    self.Open(0)  #不开语音提示
+            if aim==self.now:
+                self.Open(0)  #不开语音提示
+            else:
+                if aim>self.now:
+                    self.direction = 1  #确定方向：上行
+                    print('确定方向为上行')
+                    self.list_num[aim] = aim
+                    self.count += 1
                 else:
-                    if aim>self.now:
-                        self.direction = 1  #确定方向：上行
-                        self.list_num[aim] = aim
-                        self.count += 1
-                        else:
-                            self.direction = 0  #确定方向：下行
-                            self.list_num[aim] = aim
-                            self.count += 1
+                    self.direction = 0  #确定方向：下行
+                    print('确定方向为下行')
+                    self.list_num[aim] = aim
+                    self.count += 1
 
         #原来上行，如果按下下行键，忽略；否则不忽略
         elif self.direction==1:
@@ -145,7 +123,11 @@ class Elevator:
                     pass
             else:
                 pass
-
+        print('self.count:',self.count)
+        print('aim:',aim)
+        print('self.direction:',self.direction)
+        print('self.now:',self.now)
+        print('self.list_num:',self.list_num)
 
  #手动取消楼层按键函数
     def Cannel(self,aim):      
@@ -185,10 +167,10 @@ class Elevator:
  #忽略电梯外按键函数
     def Ignore_out(self,judge):
         if judge:
-            if direction==1:
+            if self.direction==1:
                 if self.now<self.next:
                     self.outup = 0
-            if direction==0:
+            if self.direction==0:
                 if self.now>self.next:
                     self.downup = 0
 
@@ -197,20 +179,21 @@ class Elevator:
         for i in range(len(list_add_weight)):
             list_add_weight[i] = float(list_add_weight[i])
         self.heavy += sum(list_add_weight)
+        print(self.heavy)
         if self.heavy>=630:
             self.alarm = 1
-            self.Open(0)            ###之后还有输入载重变化
-            self.Heavy(list_add_weight)
+            print("已超重~~")
+            self.Open(0)            
         elif self.heavy>530 and self.heavy<630:
             if self.direction==1:
-                for each in list_num[self.now+1:]:
+                for each in self.list_num[self.now+1:]:
                     if each>=0:
                         self.next = each
                         break
                 if self.next-self.now>1:
                     self.Ignore_out(1)
             elif self.direction==0:
-                for each in list_num[:self.now]:
+                for each in self.list_num[:self.now]:
                     if each>=0:
                         self.next = each
                         break
@@ -224,15 +207,16 @@ class Elevator:
         if self.direction==-1:  
             if self.now==0:      #原来停在一楼，忽略
                 pass
-            else while self.inopen==0\     #按键状态没有变化
-                    and self.open==0\     
-                    and self.close==0\    
-                    and self.outup==0\       
-                    and self.outdown==0\     
-                    and self.count==0\      
-                    and self.help==0\       
-                    and self.heavy<10\      
-                    and self.alarm==0:
+            else:
+                while (self.inopen==0    #按键状态没有变化
+                    and self.open==0      
+                    and self.close==0    
+                    and self.outup==0       
+                    and self.outdown==0     
+                    and self.count==0     
+                    and self.help==0       
+                    and self.heavy<10      
+                    and self.alarm==0):
                         if self.start==0:
                             self.start = datetime.now() #计时开始
                         else:
@@ -242,49 +226,69 @@ class Elevator:
                             self.direction = 0
                             break
                 
-                    else:                       #按键有变化，计时重新开始
-                        self.start = 0
-                
- #拼接键盘输入的字符（数字）函数
-    def Add_floor(self,num):
-        global floor
-        floor += num
+                else:                       #按键有变化,计时重新开始
+                    self.start = 0
 
- #删除操作函数
-    def Del(self):
-        global floor
-        floor = floor[:-1]
-    
+ #转换输入，实现控制按键
+    def Trans(self,chara):
+        chara = chara.split(';')
+        for i in range(len(chara)):
+            chara[i] = chara[i].split(',')
+        #floor:[[电梯内按下的楼层],[电梯外按下上行键的楼层],[电梯外按下下行键的楼层]]
+        print(chara)
+    #控制按键
+        if len(chara[0]):
+            for each in chara[0]:
+                if each=='':
+                    pass
+                else:
+                    e.Button(int(each)-1)
+        if len(chara[1]):
+            for each in chara[1]:
+                if each=='':
+                    pass
+                else:
+                    e.OutUp(int(each)-1)
+        if len(chara[2]):
+            for each in chara[2]:
+                if each=='':
+                    pass
+                else:
+                    e.OutDown(int(each)-1)
+                    
+ 
 if __name__=='__main__':
     e = Elevator()
     while True:
-        if keyboard.read_key==' ':      #按下空格键，开始监听键盘
-            floor = ''
-            keyboard.add_hotkey('0',e.Add_floor,args=('0'))
-            keyboard.add_hotkey('1',e.Add_floor,args=('1'))
-            keyboard.add_hotkey('2',e.Add_floor,args=('2'))
-            keyboard.add_hotkey('3',e.Add_floor,args=('3'))
-            keyboard.add_hotkey('4',e.Add_floor,args=('4'))
-            keyboard.add_hotkey('5',e.Add_floor,args=('5'))
-            keyboard.add_hotkey('6',e.Add_floor,args=('6'))
-            keyboard.add_hotkey('7',e.Add_floor,args=('7'))
-            keyboard.add_hotkey('8',e.Add_floor,args=('8'))
-            keyboard.add_hotkey('9',e.Add_floor,args=('9'))
-            keyboard.add_hotkey(',',e.Add_floor,args=(','))
-            keyboard.add_hotkey(';',e.Add_floor,args=(';'))
-            keyboard.add_hotkey('backspace',e.Del_floor)
-            recorded = keyboard.record(until='enter')    #按下回车键，停止监听
-        else:
-            pass
+        floor = input() #输入格式：电梯内按下的楼层；电梯外按下上行键的楼层；电梯外按下下行键的楼层
+                                    #同类之间用','隔开
+        e.Trans(floor)
+        while True:
+            #电梯上行
+            if e.direction==1:      
+                time.sleep(2)
+                while True:
+                    e.now += 1
+                    if e.list_num[e.now]==e.now:
+                        e.Open(1)
+                        break
 
-        floor = floor[1:].split(';')
-        for i in range(len(floor)):
-            floor[i] = floor[i].split(',')
-        #floor:[[电梯内按下的楼层],[电梯外按下上行键的楼层],[电梯外按下下行键的楼层]]
+            #电梯下行
+            if e.direction==0:
+                time.sleep(2)
+                while True:
+                    e.now -= 1
+                    if e.list_num[e.now]==e.now:
+                        e.Open(1)
+                        break
 
-    
-  
-        
+            #判断是否结束一轮运行
+            flag = 1              #结束标志
+            for each_num in e.list_num:
+                if each_num>=0:
+                    flag = 0
+            if flag:
+                break
 
     
                     
