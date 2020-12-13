@@ -9,7 +9,9 @@ class Elevator:
         self.open = 0     #开门功能
         self.close = 0    #关门功能
         self.outup = 0       #上行键（电梯外）
+        self.force_outup = 0  #为1时，忽略电梯外按下的上行键
         self.outdown = 0     #下行键（电梯外）
+        self.force_outdown = 0  #为1时，忽略电梯外按下的下行键
         self.direction = -1 #方向（向下为0；向上为1,停止为-1）
         self.now = 0        #现在到达的楼层
         self.count = 0      #已经按下的楼层数
@@ -21,6 +23,7 @@ class Elevator:
         self.start = 0      #自动回停的条件：计时开始
         self.end = 0        #自动回停的条件：计时结束
         self.floor = []     #输入的楼层
+        self.rreturn = 0    #自动回停标志
         
  #开门函数,sound==1:开启语音提示
     def Open(self,sound):
@@ -31,13 +34,23 @@ class Elevator:
             self.Sound()
         time.sleep(2)
 
+        print('self.count:',self.count)
+        print('self.direction:',self.direction)
+        print('self.now:',self.now)
+        print('self.list_num:',self.list_num)
+
+        if self.rreturn:
+            self.Close()
+
+        else:
        #输入重量的变化
-        self.weight = input('请输入重量的变化：')
-        if self.weight!='':
-            self.weight = self.weight.split(',')
-            self.Heavy(self.weight)
-        self.Close()
-        self.open = 0
+            self.weight = input('请输入重量的变化：')
+            if self.weight!='':
+                self.weight = self.weight.split(',')
+                self.Heavy(self.weight)
+            self.Close()
+            self.open = 0
+            self.rreturn = 0
 
  #关门函数   
     def Close(self):
@@ -62,12 +75,13 @@ class Elevator:
     def Sound(self):   
         print("%d楼到了~~"%(self.now+1))
         self.list_num[self.now] = -1
+        self.count -= 1
         self.flag = 0       #没有楼层按下的标志
         for each in self.list_num:
             if each!=-1:
                 self.flag = 1
         if not self.flag:
-            self.direction = -1   #没有楼层按下，10分钟内电梯停在该楼层
+            self.direction = -1   #没有楼层按下，暂时停在该楼层
 
  #按铃求助按键函数
     def Help(self):
@@ -79,17 +93,19 @@ class Elevator:
 
  #电梯外上行键
     def OutUp(self,aim):
-        print("电梯外上行")
-        self.outup = 1
-        self.Button(aim)
-        self.outup = 0   #自动取消按下
+        if not self.force_outup:
+            print("电梯外上行")
+            self.outup = 1
+            self.Button(aim)
+            self.outup = 0   #自动取消按下
         
  #电梯外下行键
     def OutDown(self,aim):
-        print('电梯外下行')
-        self.outdown = 1
-        self.Button(aim)
-        self.outdown = 0   #自动取消按下
+        if not self.force_outdown:
+            print('电梯外下行')
+            self.outdown = 1
+            self.Button(aim)
+            self.outdown = 0   #自动取消按下
 
  #按键函数
     def Button(self,aim):    
@@ -101,20 +117,23 @@ class Elevator:
                 if aim>self.now:
                     self.direction = 1  #确定方向：上行
                     print('确定方向为上行')
-                    self.list_num[aim] = aim
-                    self.count += 1
+                    if self.list_num[aim]==-1:
+                        self.list_num[aim] = aim
+                        self.count += 1
                 else:
                     self.direction = 0  #确定方向：下行
                     print('确定方向为下行')
-                    self.list_num[aim] = aim
-                    self.count += 1
+                    if self.list_num[aim]==-1:
+                        self.list_num[aim] = aim
+                        self.count += 1
 
         #原来上行，如果按下下行键，忽略；否则不忽略
         elif self.direction==1:
             if not self.outdown:
                 if aim>self.now:
-                    self.list_num[aim] = aim
-                    self.count += 1
+                    if self.list_num[aim]==-1:
+                        self.list_num[aim] = aim
+                        self.count += 1
                 else:
                     pass
             else:
@@ -124,8 +143,9 @@ class Elevator:
         elif self.direction==0:
             if not self.outup:
                 if aim<self.now:
-                    self.list_num[aim] = aim
-                    self.count += 1
+                    if self.list_num[aim]==-1:
+                        self.list_num[aim] = aim
+                        self.count += 1
                 else:
                     pass
             else:
@@ -172,24 +192,25 @@ class Elevator:
             #取消所按楼层
             self.list_num[aim] = -1
             self.cancel = 1
+            self.count -= 1
+
         print('取消')
         print('aim:',aim)
+        print('self.count',self.count)
         print('self.direction:',self.direction)
         print('self.now:',self.now)
         print('self.list_num:',self.list_num)
 
-
  #忽略电梯外按键函数
- #########
     def Ignore_out(self,judge):
-        print("重量忽略")
+        print("忽略电梯外按键")
         if judge:
             if self.direction==1:
                 if self.now<self.next:
-                    self.outup = 0
+                    self.force_outup = 1     #忽略电梯外按下的上行键
             if self.direction==0:
                 if self.now>self.next:
-                    self.downup = 0
+                    self.force_downup = 1    #忽略电梯外按下的下行键
 
  #计算载重函数
     def Heavy(self,list_add_weight):     #list_add_weight:变化重量的列表
@@ -218,35 +239,9 @@ class Elevator:
                 if self.now-self.next>1:
                     self.Ignore_out(1)
         else:
-            pass
-'''
- #自动回停函数
-    def Return_first(self):
-        if self.direction==-1:  
-            if self.now==0:      #原来停在一楼，忽略
-                pass
-            else:
-                while (self.inopen==0    #按键状态没有变化
-                    and self.open==0      
-                    and self.close==0    
-                    and self.outup==0       
-                    and self.outdown==0     
-                    and self.count==0     
-                    and self.help==0       
-                    and self.heavy<10      
-                    and self.alarm==0):
-                        if self.start==0:
-                            self.start = datetime.now() #计时开始
-                        else:
-                            self.end = datetime.now()
-                        if self.end.minute-self.start.minute>=1:    #持续10分钟
-                            self.list_num[0] = 0
-                            self.direction = 0
-                            break
-                
-                else:                       #按键有变化,计时重新开始
-                    self.start = 0
-'''
+            self.force_outup = 0
+            self.force_outdown = 0
+
  #监听输入函数
     def ReadInput(self,caption,default,timeout=3):  #超时3秒没有输入则跳过
         start_time = time.time()
@@ -336,40 +331,9 @@ class Elevator:
             else:
                 break
                 
-   '''                 
- #转换输入，实现控制按键
-    def trans(self,chara):
-        chara = chara.split(';')
-        for i in range(len(chara)):
-            chara[i] = chara[i].split(',')
-        #floor:[[电梯内按下的楼层],[电梯外按下上行键的楼层],[电梯外按下下行键的楼层]]
-        print(chara)
-    #控制按键
-        if len(chara[0]):
-            for each in chara[0]:
-                if each=='':
-                    pass
-                else:
-                    e.Button(int(each)-1)
-        if len(chara[1]):
-            for each in chara[1]:
-                if each=='':
-                    pass
-                else:
-                    e.OutUp(int(each)-1)
-        if len(chara[2]):
-            for each in chara[2]:
-                if each=='':
-                    pass
-                else:
-                    e.OutDown(int(each)-1)
-       '''             
  
 if __name__=='__main__':
     e = Elevator()
-   # while True:
-    #floor = input() #输入格式：电梯内按下的楼层；电梯外按下上行键的楼层；电梯外按下下行键的楼层
-                                #同类之间用','隔开
     e.start = datetime.now()
     while True:
         e.Trans()     #可输入按键
@@ -382,6 +346,7 @@ if __name__=='__main__':
             if e.now>0:
                 e.list_num[0] = 0
                 e.direction = 0
+                e.rreturn = 1
                 print("自动回停")
         
         #电梯上行
@@ -389,8 +354,9 @@ if __name__=='__main__':
             e.start = 0
             time.sleep(2)
             while True:
+                e.Open(0)
                 e.now += 1
-                e.Trans()
+                e.Trans()    #可输入按键
                 if e.list_num[e.now]==e.now:
                     e.Open(1)
                     break
@@ -400,19 +366,12 @@ if __name__=='__main__':
             e.start = 0
             time.sleep(2)
             while True:
+                e.Open(0)
                 e.now -= 1
-                e.Trans()
+                e.Trans()    #可输入按键
                 if e.list_num[e.now]==e.now:
                     e.Open(1)
                     break
-
-            #判断是否结束一轮运行
-            #flag = 1              #结束标志
-            #for each_num in e.list_num:
-             #   if each_num>=0:
-              #      flag = 0
-            #if flag:
-             #   break
 
     
                     
