@@ -83,7 +83,7 @@ class Elevator:
         if not self.flag:
             self.direction = -1   #没有楼层按下，暂时停在该楼层
 
- #按铃求助按键函数
+ #按铃求助函数
     def Help(self):
         self.help = 1
         print("求助！求助！")
@@ -357,7 +357,7 @@ if __name__=='__main__':
                 e.Open(0)
                 e.now += 1
                 e.Trans()    #可输入按键
-                if e.list_num[e.now]==e.now:
+                if e.list_num[e.now]==e.now:  #到达楼层
                     e.Open(1)
                     break
 
@@ -369,7 +369,7 @@ if __name__=='__main__':
                 e.Open(0)
                 e.now -= 1
                 e.Trans()    #可输入按键
-                if e.list_num[e.now]==e.now:
+                if e.list_num[e.now]==e.now:   #到达楼层
                     e.Open(1)
                     break
 
